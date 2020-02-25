@@ -1,6 +1,6 @@
-const pg = require("pg");
+const pg = require('pg');
 const client = new pg.Client(
-  process.env.DATABASE_URL || "postgres://localhost/acme_db"
+  process.env.DATABASE_URL || 'postgres://localhost/acme_ownership_db'
 );
 
 client.connect();
@@ -16,42 +16,61 @@ const sync = async () => {
 
   CREATE TABLE users(
     id UUID PRIMARY KEY default uuid_generate_v4(),
-    name VARCHAR(255) UNIQUE NOT NULL  
+    name VARCHAR(255)  NOT NULL
     );
-  
+
   CREATE TABLE things(
       id UUID PRIMARY KEY default uuid_generate_v4(),
-      name VARCHAR(255) UNIQUE NOT NULL  
+      name VARCHAR(255) NOT NULL
       );
 
   CREATE TABLE user_things(
         id UUID PRIMARY KEY default uuid_generate_v4(),
         "userId" UUID REFERENCES users(id),
-        "thingsId" UUID REFERENCES things(id)
+        "thingId" UUID REFERENCES things(id)
         );
+
+  CREATE UNIQUE INDEX ON user_departments("departmentId", "userId")
 `;
 
   const [Terri, Chaise, work, drawing] = await Promise.all([
-    createUser({ name: "Terri" }),
-    createUser({ name: "Chaise" }),
-    createThing({ name: "work" }),
-    createThing({ name: "drawing" })
+    createUser({ name: 'Terri' }),
+    createUser({ name: 'Chaise' }),
+    createThing({ name: 'work' }),
+    createThing({ name: 'drawing' }),
   ]);
   await Promise.all([
-    createUserThings({ userId: Terri.id, thingsId: drawing.id }),
-    createUserThings({ userId: Chaise.id, thingsId: work.id })
+    createUserThings({ userId: Terri.id, thingId: drawing.id }),
+    createUserThings({ userId: Chaise.id, thingId: work.id }),
   ]);
 };
 
 //Additional methods here for reading, creating, destroying
 const createUser = async ({ name }) => {
   return (
-    await client.query("INSERT INTO users(name) VALUES ($1) returning *", [
-      name
+    await client.query('INSERT INTO users(name) VALUES ($1) returning *', [
+      name,
     ])
   ).rows[0];
 };
 
+const createThing = async ({ name }) => {
+  return (
+    await client.query('INSERT INTO things(name) VALUES ($1) returning *', [
+      name,
+    ])
+  ).rows[0];
+};
+
+const createUserThings = async ({ userId, thingId }) => {
+  return (
+    await client.query(
+      'INSERT INTO user_things("userId", "thingId") VALUES ($1, $2) returning *',
+      [userId, thingId]
+    )
+  ).rows[0];
+};
+
 module.exports = {
-  sync
+  sync,
 };
