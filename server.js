@@ -1,11 +1,16 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const path = require('path');
-const db = require('./db');
+const path = require("path");
+const db = require("./db");
+app.use(express.json());
+app.use((req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+});
+app.use("/assets", express.static(path.join(__dirname, "assets")));
 
-
-app.get('/', (req, res, next)=> {
-  res.sendFile(path.join(__dirname, 'index.html'));
+app.get("/", (req, res, next) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 //Additional routes here
@@ -13,27 +18,61 @@ app.get('/', (req, res, next)=> {
 //GET, POST, DELETE for /api/things
 //GET, POST, DELETE for /api/user_things
 
+app.get("/api/users", (req, res, next) => {
+  db.readUsers()
+    .then(users => {
+      console.log("USERS", users);
+      res.send(users);
+    })
+    .catch(next);
+});
 
-app.use((req, res, next)=> {
+app.get("/api/things", (req, res, next) => {
+  db.readThings()
+    .then(things => {
+      res.send(things);
+    })
+    .catch(next);
+});
+
+app.get("/api/user_things", (req, res, next) => {
+  db.readUserThings()
+    .then(userThings => {
+      res.send(userThings);
+    })
+    .catch(next);
+});
+
+app.post("/api/users", (req, res, next) => {
+  console.log(req.body);
+  db.createUser(req.body.id, req.body.name)
+    .then(response => {
+      res.send(response);
+    })
+    .catch(next);
+});
+
+app.use((req, res, next) => {
   next({
     status: 404,
     message: `Page not found for ${req.method} ${req.url}`
-  })
+  });
 });
 
-app.use((err, req, res, next)=> {
+app.use((err, req, res, next) => {
   res.status(err.status || 500).send({
     message: err.message || JSON.stringify(err)
   });
 });
 
-
-
 const port = process.env.PORT || 3000;
 
 db.sync()
-  .then(()=> {
-    app.listen(port, ()=> {
-      console.log(`listening on port ${port}`)
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`listening on port ${port}`);
     });
+  })
+  .catch(err => {
+    console.log(err);
   });
