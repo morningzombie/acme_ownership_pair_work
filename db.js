@@ -1,96 +1,68 @@
-const pg = require("pg");
-const client = new pg.Client(
-  process.env.DATABASE_URL || "postgres://localhost/acme_ownership_db"
-);
+const {Client}= require('pg');
+
+const client = new Client('postgres://localhost/many_to_many_db');
 
 client.connect();
 
-const sync = async () => {
-  const SQL = `
-  CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+const sync = async() => {
+const SQL =`
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-  DROP TABLE IF EXISTS user_things;
-  DROP TABLE IF EXISTS users;
-  DROP TABLE IF EXISTS things;
+DROP TABLE IF EXISTS user_departments;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS departments;
 
+CREATE TABLE users(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    CHECK (char_length(name)>0)
+);
+CREATE TABLE departments(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    CHECK (char_length(name)>0)
+);
+CREATE TABLE user_departments(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "departmentId" UUID REFERENCES departments(id),
+    "userId" UUID REFERENCES users(id)
+);
+CREATE UNIQUE INDEX ON user_departments("departmentId", "userId");
+`;
+await client.query(SQL);
+const [moe, larry, engineering, hr]= await Promise.all([
+    createUser({name: 'Moe'}),
+    createUser({name: 'Larry'}),
+    createDepartment({name:'Engineering'}),
+    createDepartment({name:'HR'})
+]);
 
-  CREATE TABLE users(
-    id UUID PRIMARY KEY default uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL
-    );
+await Promise.all([
+    createUserDepartment({userId:larry.id, departmentId: engineering.id}),
+    createUserDepartment({userId:larry.id, departmentId: hr.id}),
 
-  CREATE TABLE things(
-      id UUID PRIMARY KEY default uuid_generate_v4(),
-      name VARCHAR(255) NOT NULL
-      );
+    createUserDepartment({userId:moe.id, departmentId: hr.id})
 
-  CREATE TABLE user_things(
-        id UUID PRIMARY KEY default uuid_generate_v4(),
-        "userId" UUID REFERENCES users(id),
-        "thingId" UUID REFERENCES things(id)
-        );
-
-  CREATE UNIQUE INDEX ON user_things("userId", "thingId");
-  `;
-
-  await client.query(SQL);
-
-  const [Terri, Chaise, work, drawing] = await Promise.all([
-    createUser({ name: "Terri" }),
-    createUser({ name: "Chaise" }),
-    createThing({ name: "work" }),
-    createThing({ name: "drawing" })
-  ]);
-  await Promise.all([
-    createUserThings({ userId: Terri.id, thingId: drawing.id }),
-    createUserThings({ userId: Chaise.id, thingId: work.id })
-  ]);
+]);
+};
+const createUser = async({name}) => {
+    return (
+        await client.query('INSERT INTO users(name) VALUES ($1) returning *', [name])
+        ).rows[0];
 };
 
-//Additional methods here for reading, creating, destroying
-const createUser = async ({ name }) => {
-  return (
-    await client.query("INSERT INTO users(name) VALUES ($1) returning * ", [
-      name
-    ])
-  ).rows[0];
+const createDepartment = async({name}) => {
+    return (
+        await client.query('INSERT INTO departments(name) VALUES ($1) returning *', [name])
+        ).rows[0];
 };
 
-const createThing = async ({ name }) => {
-  return (
-    await client.query("INSERT INTO things(name) VALUES ($1) returning *", [
-      name
-    ])
-  ).rows[0];
-};
-
-const createUserThings = async ({ userId, thingId }) => {
-  return (
-    await client.query(
-      'INSERT INTO user_things("userId", "thingId") VALUES ($1, $2) returning *',
-      [userId, thingId]
-    )
-  ).rows[0];
-};
-
-const readUsers = async () => {
-  return (await client.query("SELECT * FROM users")).rows;
-};
-
-const readThings = async () => {
-  return (await client.query("SELECT * FROM things")).rows;
-};
-
-const readUserThings = async () => {
-  return (await client.query("SELECT * FROM user_things")).rows;
+const createUserDepartment = async({userId, departmentId}) => {
+    return (
+        await client.query('INSERT INTO user_departments("userId", "departmentId") VALUES ($1, $2) returning *', [userId, departmentId])
+        ).rows[0];
 };
 
 module.exports = {
-  sync,
-  readUsers,
-  createUser,
-  createThing,
-  createUserThings,
-  readUserThings,
-  readThings
-};
+    sync
+};;
