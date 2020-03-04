@@ -16,12 +16,14 @@ const sync = async () => {
 
   CREATE TABLE users(
     id UUID PRIMARY KEY default uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    CHECK (char_length(name)>0)
     );
 
   CREATE TABLE things(
       id UUID PRIMARY KEY default uuid_generate_v4(),
-      name VARCHAR(255) NOT NULL
+      name VARCHAR(255) NOT NULL,
+      CHECK (char_length(name)>0)
       );
 
   CREATE TABLE user_things(
@@ -42,34 +44,28 @@ const sync = async () => {
     createThing({ name: "drawing" })
   ]);
   await Promise.all([
-    createUserThings({ userId: Terri.id, thingId: drawing.id }),
-    createUserThings({ userId: Chaise.id, thingId: work.id })
+    createUserThing({ userId: Terri.id, thingId: drawing.id }),
+    createUserThing({ userId: Chaise.id, thingId: work.id })
   ]);
 };
 
 //Additional methods here for reading, creating, destroying
 const createUser = async ({ name }) => {
   return (
-    await client.query("INSERT INTO users(name) VALUES ($1) returning * ", [
-      name
-    ])
+    await client.query("INSERT INTO users(name) VALUES ($1) returning * ", [name])
   ).rows[0];
 };
 
 const createThing = async ({ name }) => {
   return (
-    await client.query("INSERT INTO things(name) VALUES ($1) returning *", [
-      name
-    ])
+    await client.query("INSERT INTO things(name) VALUES ($1) returning *", [name])
   ).rows[0];
 };
 
-const createUserThings = async ({ userId, thingId }) => {
+const createUserThing = async ({ userId, thingId }) => {
   return (
-    await client.query(
-      'INSERT INTO user_things("userId", "thingId") VALUES ($1, $2) returning *',
-      [userId, thingId]
-    )
+    await client.query('INSERT INTO user_things("userId", "thingId") VALUES ($1, $2) returning *',
+      [userId, thingId])
   ).rows[0];
 };
 
@@ -85,12 +81,30 @@ const readUserThings = async () => {
   return (await client.query("SELECT * FROM user_things")).rows;
 };
 
+const deleteUser = async (id) => {
+  const SQL = 'DELETE FROM users WHERE id = $1';
+  await client.query(SQL, [id]);
+};
+
+const deleteThing = async (id) => {
+  const SQL = 'DELETE FROM things WHERE id = $1';
+  await client.query(SQL, [id]);
+};
+
+const deleteUserThing = async (id) => {
+  const SQL = 'DELETE FROM user_things WHERE id = $1';
+  await client.query(SQL, [id]);
+};
+
 module.exports = {
   sync,
   readUsers,
   createUser,
   createThing,
-  createUserThings,
+  createUserThing,
   readUserThings,
-  readThings
+  readThings,
+  deleteUser,
+  deleteThing,
+  deleteUserThing
 };

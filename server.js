@@ -30,6 +30,7 @@ app.get("/api/users", (req, res, next) => {
 app.get("/api/things", (req, res, next) => {
   db.readThings()
     .then(things => {
+      console.log("THINGS", things);
       res.send(things);
     })
     .catch(next);
@@ -37,19 +38,53 @@ app.get("/api/things", (req, res, next) => {
 
 app.get("/api/user_things", (req, res, next) => {
   db.readUserThings()
-    .then(userThings => {
-      res.send(userThings);
+    .then(user_things => {
+      console.log("USER-THINGS", user_things);
+      res.send(user_things);
     })
     .catch(next);
 });
 
 app.post("/api/users", (req, res, next) => {
-  console.log(req.body);
-  db.createUser(req.body.id, req.body.name)
-    .then(response => {
-      res.send(response);
+  db.createUser(req.body)
+    .then(user => 
+      res.send(user))
+    .catch(next);
+});
+
+app.post("/api/things", (req, res, next) => {
+  db.createThing(req.body)
+    .then(thing => {
+      res.send(thing);
     })
     .catch(next);
+});
+
+//ERROR: new row for relation "things" violates check constraint "things_name_check"
+
+app.post("/api/user_things", (req, res, next) => {
+  console.log("user_things", req.body);
+  db.createUserThing(req.body)
+    .then(user_thing => res.send(user_thing))
+    .catch(next);
+});
+
+app.delete('/api/users/:id', (req, res, next) => {
+  db.deleteUser(req.params.id)
+      .then(() => res.sendStatus(204))
+      .catch(next);
+});
+
+app.delete('/api/things/:id', (req, res, next) => {
+  db.deleteThing(req.params.id)
+      .then(() => res.sendStatus(204))
+      .catch(next);
+});
+
+app.delete('/api/user_things/:id', (req, res, next) => {
+  db.deleteUserThing(req.params.id)
+      .then(() => res.sendStatus(204))
+      .catch(next);
 });
 
 app.use((req, res, next) => {
