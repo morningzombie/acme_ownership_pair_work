@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const express = require("express");
 const app = express();
 const path = require("path");
@@ -101,13 +102,9 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
+=======
+const db = require('./db');
+>>>>>>> 34304899d9eba7fb2b6d8bdaa49cfe1e798d5cdd
 
 db.sync()
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`listening on port ${port}`);
-    });
-  })
-  .catch(err => {
-    console.log(err);
-  });
+.then(()=>console.log('synced'));
